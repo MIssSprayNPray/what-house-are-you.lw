@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Which House Do You Belong To?</title>
+    <!-- Tailwind via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React + ReactDOM via CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Framer Motion for animations -->
+    <script crossorigin src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.umd.js"></script>
+    <!-- Babel for JSX in the browser (dev only) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      html, body, #root { height: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useMemo, useState, useEffect } = React;
+      const { motion, AnimatePresence } = window.framerMotion;
+
+      import React, { useMemo, useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+// --- Quiz Data -------------------------------------------------------------
+const QUIZ = {
+  title: "🧭 Which House Do You Belong To?",
+  subtitle:
+    "Answer the following questions. Choose the answer that feels most true — not what you wish was true!",
+  questions: [
+    {
+      q: "How do you respond to a challenge?",
+      options: {
+        A: "Quietly assess and plan your next move",
+        B: "Stay calm and support others involved",
+        C: "Get excited — time to prove yourself",
+        D: "Think fast and improvise a bold response",
+      },
+    },
+    {
+      q: "In a team, what role do you naturally take?",
+      options: {
+        A: "The strategist behind the scenes",
+        B: "The steady support, making sure no one is left behind",
+        C: "The idea-generator who brings unusual insight",
+        D: "The quick-talker who dives in headfirst",
+      },
+    },
+    {
+      q: "What motivates you most?",
+      options: {
+        A: "Achieving long-term goals",
+        B: "Building strong relationships",
+        C: "Seeking knowledge or creative expression",
+        D: "Freedom and adrenaline",
+      },
+    },
+    {
+      q: "What’s your biggest strength?",
+      options: {
+        A: "Ambition and self-control",
+        B: "Compassion and reliability",
+        C: "Intelligence and originality",
+        D: "Boldness and quick instincts",
+      },
+    },
+    {
+      q: "You walk into a room full of strangers. What do you do first?",
+      options: {
+        A: "Observe — listen more than speak",
+        B: "Smile and look for someone who seems nervous",
+        C: "Start a curious conversation",
+        D: "Make a fast, memorable impression",
+      },
+    },
+    {
+      q: "Which sounds like your ideal environment?",
+      options: {
+        A: "A candlelit library with locked drawers",
+        B: "A cozy garden filled with laughter",
+        C: "A sun-dappled studio full of half-finished inventions",
+        D: "A rooftop at midnight with the wind in your hair",
+      },
+    },
+    {
+      q: "What’s your flaw? (Be honest.)",
+      options: {
+        A: "Secretive or calculating",
+        B: "Too self-sacrificing",
+        C: "Overthinks everything",
+        D: "Impulsive or defiant",
+      },
+    },
+    {
+      q: "Pick a symbol:",
+      options: {
+        A: "A silver dagger hidden in leaves",
+        B: "A sunflower in bloom",
+        C: "An open book wrapped in laurel",
+        D: "A rabbit leaping into the wind",
+      },
+    },
+  ],
+  results: {
+    A: {
+      key: "A",
+      emoji: "🐾",
+      house: "House Kohvayne",
+      motto: "“From shadows, we rise.”",
+      blurb:
+        "Cunning, strategic, and fiercely driven. You value results, loyalty, and precision — often underestimated, never unprepared.",
+    },
+    B: {
+      key: "B",
+      emoji: "🦥",
+      house: "House Tunarique",
+      motto: "“With heart and humor, we endure.”",
+      blurb:
+        "Steady, kind, and joyful. You lead with love, lift others with warmth, and prove that gentleness is strength.",
+    },
+    C: {
+      key: "C",
+      emoji: "🦊",
+      house: "House Kyrleafen",
+      motto: "“Truth grows where thought flows.”",
+      blurb:
+        "Creative, thoughtful, and visionary. You seek truth, beauty, and understanding — even if you must blaze your own trail to find it.",
+    },
+    D: {
+      key: "D",
+      emoji: "🐇",
+      house: "House Moodlenip",
+      motto: "“Run wild. Think fast.”",
+      blurb:
+        "Rebellious, daring, and quick on your feet. You thrive in motion, challenge limits, and act before the world can catch up.",
+    },
+  },
+};
+
+// --- Helpers ---------------------------------------------------------------
+function clsx(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function useLocalStorage(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch {
+      return initialValue;
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch {}
+  }, [key, value]);
+  return [value, setValue];
+}
+
+// --- Component -------------------------------------------------------------
+function HouseQuiz() {
+  const total = QUIZ.questions.length;
+  const [index, setIndex] = useLocalStorage("house-quiz-index", 0);
+  const [answers, setAnswers] = useLocalStorage("house-quiz-answers", []);
+  const [showResults, setShowResults] = useLocalStorage("house-quiz-results", false);
+
+  const progress = Math.round(((showResults ? total : index) / total) * 100);
+
+  const counts = useMemo(() => {
+    const c = { A: 0, B: 0, C: 0, D: 0 };
+    answers.forEach((k) => (c[k] = (c[k] || 0) + 1));
+    return c;
+  }, [answers]);
+
+  const topKey = useMemo(() => {
+    const entries = Object.entries(counts);
+    entries.sort((a, b) => b[1] - a[1]);
+    const [first, second] = entries;
+    if (!first) return "A";
+    if (second && first[1] === second[1]) return first[0] + second[0];
+    return first[0];
+  }, [counts]);
+
+  const handlePick = (key) => {
+    const nextAnswers = [...answers];
+    nextAnswers[index] = key;
+    setAnswers(nextAnswers);
+    if (index + 1 < total) setIndex(index + 1);
+    else setShowResults(true);
+  };
+
+  const handlePrev = () => setIndex((i) => Math.max(0, i - 1));
+
+  const reset = () => {
+    setIndex(0);
+    setAnswers([]);
+    setShowResults(false);
+  };
+
+  const shareText = React.useMemo(() => {
+    const picked = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, v]) => `${k}:${v}`)
+      .join(" ");
+    if (topKey.length === 1) {
+      const r = QUIZ.results[topKey];
+      return `I got ${r.emoji} ${r.house} on the House Quiz! (${picked})`;
+    }
+    return `I tied on the House Quiz! (${picked})`;
+  }, [counts, topKey]);
+
+  const canShare = typeof navigator !== "undefined" && navigator.share;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800 p-6">
+      <div className="mx-auto max-w-3xl">
+        <header className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">{QUIZ.title}</h1>
+          <p className="mt-2 text-slate-600 max-w-2xl mx-auto">{QUIZ.subtitle}</p>
+        </header>
+
+        <div className="w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-3 mb-6">
+          <div className="flex items-center justify-between text-sm font-medium mb-2">
+            <span>{showResults ? "Results" : `Question ${index + 1} of ${total}`}</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+            <AnimatePresence initial={false}>
+              <motion.div
+                key={progress}
+                className="h-full bg-slate-800"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ type: "spring", stiffness: 120, damping: 20 }}
+              />
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {!showResults ? (
+            <motion.section
+              key={`q-${index}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5"
+            >
+              <h2 className="text-xl md:text-2xl font-semibold mb-4">{QUIZ.questions[index].q}</h2>
+              <div className="grid gap-3">
+                {Object.entries(QUIZ.questions[index].options).map(([key, label]) => {
+                  const selected = answers[index] === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => handlePick(key)}
+                      className={clsx(
+                        "text-left p-4 rounded-xl border transition shadow-sm",
+                        "hover:shadow-md focus:outline-none focus:ring-2",
+                        selected
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white border-slate-200 hover:border-slate-300"
+                      )}
+                    >
+                      <span className="font-bold mr-2">{key}.</span> {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 flex items-center justify-between">
+                <button
+                  onClick={handlePrev}
+                  disabled={index === 0}
+                  className={clsx(
+                    "px-4 py-2 rounded-xl border text-sm font-medium",
+                    index === 0
+                      ? "opacity-40 cursor-not-allowed border-slate-200"
+                      : "hover:bg-slate-50 border-slate-300"
+                  )}
+                >
+                  ← Back
+                </button>
+                <div className="text-sm text-slate-500">
+                  Tip: you can change your answer by clicking a different option.
+                </div>
+              </div>
+            </motion.section>
+          ) : (
+            <motion.section
+              key="results"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6"
+            >
+              <ResultCard counts={counts} topKey={topKey} />
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <button
+                  onClick={reset}
+                  className="px-4 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 font-medium"
+                >
+                  Retake quiz
+                </button>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      if (canShare) await navigator.share({ text: shareText });
+                      else {
+                        await navigator.clipboard.writeText(shareText);
+                        alert("Copied your result to clipboard!");
+                      }
+                    } catch {}
+                  }}
+                  className="px-4 py-3 rounded-xl bg-slate-900 text-white font-semibold hover:opacity-95"
+                >
+                  {canShare ? "Share result" : "Copy result"}
+                </button>
+              </div>
+
+              <div className="mt-8">
+                <ScoreBreakdown counts={counts} />
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        <footer className="text-center text-xs text-slate-500 mt-8">
+          Made with ❤️ — Houses: Kohvayne, Tunarique, Kyrleafen, Moodlenip
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function ResultCard({ counts, topKey }) {
+  const tied = topKey.length > 1;
+  const topA = topKey[0];
+  const result = QUIZ.results[topA];
+
+  return (
+    <div>
+      <div className="flex items-start gap-4">
+        <div className="text-4xl" aria-hidden>
+          {result.emoji}
+        </div>
+        <div>
+          <h3 className="text-2xl font-extrabold tracking-tight">
+            {tied ? "It's a tie!" : `${result.house}`}
+          </h3>
+          <p className="mt-1 text-slate-600">
+            {tied ? (
+              <>
+                Your answers split across houses. Read the blurbs below and pick
+                the one that feels most like you right now.
+              </>
+            ) : (
+              <>{result.motto}</>
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {Object.values(QUIZ.results).map((r) => (
+          <div
+            key={r.key}
+            className={clsx(
+              "rounded-xl border p-4 bg-white",
+              r.key === topA ? "border-slate-900" : "border-slate-200"
+            )}
+          >
+            <div className="flex items-center gap-3 mb-1">
+              <span className="text-2xl" aria-hidden>
+                {r.emoji}
+              </span>
+              <h4 className="font-semibold">{r.house}</h4>
+            </div>
+            <div className="text-sm text-slate-600">{r.motto}</div>
+            <p className="mt-2 text-sm">{r.blurb}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ScoreBreakdown({ counts }) {
+  const items = [
+    { k: "A", label: "Kohvayne" },
+    { k: "B", label: "Tunarique" },
+    { k: "C", label: "Kyrleafen" },
+    { k: "D", label: "Moodlenip" },
+  ];
+
+  return (
+    <div>
+      <h4 className="font-semibold mb-2">Your answer breakdown</h4>
+      <div className="grid gap-2">
+        {items.map((it) => (
+          <div key={it.k} className="flex items-center gap-3">
+            <div className="w-28 text-sm text-slate-600">
+              <span className="font-medium">{it.k}</span> · {it.label}
+            </div>
+            <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-slate-900"
+                initial={{ width: 0 }}
+                animate={{ width: `${(counts[it.k] / 8) * 100}%` }}
+                transition={{ type: "spring", stiffness: 120, damping: 20 }}
+              />
+            </div>
+            <div className={"w-8 text-right text-sm"}>{counts[it.k]}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<HouseQuiz />);
+    </script>
+  </body>
+</html>
