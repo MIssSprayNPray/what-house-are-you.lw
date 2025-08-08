@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Discord Houses Quiz</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script crossorigin src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.umd.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-50">
+<div id="root"></div>
+<script type="text/babel" data-presets="env,react">
+const {{ useMemo, useState, useEffect }} = React;
+const {{ motion }} = window.framerMotion;
+const QUESTIONS = [{"q": "How do you respond to a challenge?", "options": {"A": "Quietly assess and plan your next move", "B": "Stay calm and support others involved", "C": "Get excited — time to prove yourself", "D": "Think fast and improvise a bold response"}}, {"q": "In a team, what role do you naturally take?", "options": {"A": "The strategist behind the scenes", "B": "The steady support, making sure no one is left behind", "C": "The idea-generator who brings unusual insight", "D": "The quick-talker who dives in headfirst"}}, {"q": "What motivates you most?", "options": {"A": "Achieving long-term goals", "B": "Building strong relationships", "C": "Seeking knowledge or creative expression", "D": "Freedom and adrenaline"}}, {"q": "What’s your biggest strength?", "options": {"A": "Ambition and self-control", "B": "Compassion and reliability", "C": "Intelligence and originality", "D": "Boldness and quick instincts"}}, {"q": "You walk into a room full of strangers. What do you do first?", "options": {"A": "Observe — listen more than speak", "B": "Smile and look for someone who seems nervous", "C": "Start a curious conversation", "D": "Make a fast, memorable impression"}}, {"q": "Which sounds like your ideal environment?", "options": {"A": "A candlelit library with locked drawers", "B": "A cozy garden filled with laughter", "C": "A sun-dappled studio full of half-finished inventions", "D": "A rooftop at midnight with the wind in your hair"}}, {"q": "What’s your flaw? (Be honest.)", "options": {"A": "Secretive or calculating", "B": "Too self-sacrificing", "C": "Overthinks everything", "D": "Impulsive or defiant"}}, {"q": "Pick a symbol:", "options": {"A": "A silver dagger hidden in leaves", "B": "A sunflower in bloom", "C": "An open book wrapped in laurel", "D": "A rabbit leaping into the wind"}}];
+const HOUSES = {"A": {"name": "Kohvayne", "pron": "koh-vayn", "emoji": "🐾", "inspiration": "A blend of Koh and a smooth, dark tone from Whiskey, with a touch of vanity, mystery, and ambition.", "values": ["Cunning", "Strategy", "Ambition", "Influence"], "motto": "From shadows, we rise.", "mascot": "Ringtail", "colors": ["#76323F", "#2C5E2E"], "welcome": "Your spirit speaks, your path is clear — welcome to the legacy you were born to shape in KOHVAYNE!"}, "B": {"name": "Tunarique", "pron": "too-nah-reek", "emoji": "🦥", "inspiration": "A playful twist from Tuna and Funny, with a whimsical, nurturing feel.", "values": ["Loyalty", "Laughter", "Kindness", "Community"], "motto": "With heart and humor, we endure.", "mascot": "Sloth", "colors": ["#5D3A66", "#FFBF00"], "welcome": "By emblem, trait, and truth of heart, you now bear the banner of TUNARIQUE!"}, "C": {"name": "Kyrleafen", "pron": "keer-leaf-en", "emoji": "🦊", "inspiration": "‘Kyr’ from Valkyrie and ‘leaf’ from Bayleaf, evoking a scholarly, ancient-sounding name tied to nature and knowledge.", "values": ["Wisdom", "Curiosity", "Independence", "Insight"], "motto": "Truth grows where thought flows.", "mascot": "Fox", "colors": ["#EFD6E1", "#7BA05B"], "welcome": "✨ The winds of fate have spoken — welcome to KYRLEAFEN! Your story begins here."}, "D": {"name": "Moodlenip", "pron": "moo-dul-nip", "emoji": "🐇", "inspiration": "Named after Moody and Nippy, a playful, bouncy word with a hidden sharpness — exactly like the house itself.", "values": ["Bold", "Rebellious", "Quick-Acting"], "motto": "Act swiftly, dare boldly.", "mascot": "Rabbit", "colors": ["#FFD700", "#007FFF"], "welcome": "Nice. You’re one of the bold ones. Welcome to MOODLENIP — try not to break too many rules. Or do."}};
+
+/* React quiz code unchanged from earlier build */
+function clsx(...parts) {{ return parts.filter(Boolean).join(" "); }}
+function useLocalStorage(key, initialValue) {{
+  const [value, setValue] = useState(() => {{
+    try {{ const item = window.localStorage.getItem(key); return item ? JSON.parse(item) : initialValue; }}
+    catch {{ return initialValue; }}
+  }});
+  useEffect(() => {{ try {{ window.localStorage.setItem(key, JSON.stringify(value)); }} catch {{}} }}, [key, value]);
+  return [value, setValue];
+}}
+
+function HouseQuiz() {{
+  const total = QUESTIONS.length;
+  const [i, setI] = useLocalStorage("house-i", 0);
+  const [answers, setAnswers] = useLocalStorage("house-answers", []);
+  const [done, setDone] = useLocalStorage("house-done", false);
+
+  const counts = useMemo(() => {{
+    const c = {{ A: 0, B: 0, C: 0, D: 0 }};
+    answers.forEach((k) => (c[k] = (c[k] || 0) + 1));
+    return c;
+  }}, [answers]);
+
+  const top = useMemo(() => {{
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const [first, second] = entries;
+    if (!first) return "A";
+    if (second && first[1] === second[1]) return first[0] + second[0];
+    return first[0];
+  }}, [counts]);
+
+  const handlePick = (key) => {{
+    const next = [...answers];
+    next[i] = key;
+    setAnswers(next);
+    if (i + 1 < total) setI(i + 1);
+    else setDone(true);
+  }};
+
+  const back = () => setI((n) => Math.max(0, n - 1));
+  const reset = () => {{ setI(0); setAnswers([]); setDone(false); }};
+
+  return (
+    <div className="min-h-screen p-6">
+      <div className="mx-auto max-w-3xl">
+        {!done ? (
+          <QuestionCard question={QUESTIONS[i]} qIndex={i} total={total} answers={answers} handlePick={handlePick} back={back} />
+        ) : (
+          <ResultCard top={top} reset={reset} />
+        )}
+      </div>
+    </div>
+  );
+}}
+
+function QuestionCard({{ question, qIndex, total, answers, handlePick, back }}) {{
+  return (
+    <motion.section key={{`q-${{qIndex}}`}}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.2 }}
+      className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5"
+    >
+      <h2 className="text-xl font-semibold mb-4">
+        {{`Question ${{qIndex + 1}} of ${{total}}`}}
+      </h2>
+      <p className="mb-4">{{question.q}}</p>
+      <div className="grid gap-3">
+        {{Object.entries(question.options).map(([k, label]) => {{
+          const selected = answers[qIndex] === k;
+          return (
+            <button key={k} onClick={() => handlePick(k)}
+              className={clsx(
+                "text-left p-4 rounded-xl border transition shadow-sm",
+                selected ? "bg-slate-900 text-white border-slate-900" : "bg-white border-slate-200 hover:border-slate-300"
+              )}
+            >
+              <span className="font-bold mr-2">{{k}}.</span> {{label}}
+            </button>
+          );
+        }})}}
+      </div>
+      <div className="mt-5 flex items-center justify-between">
+        <button onClick={back} disabled={qIndex === 0}
+          className={clsx(
+            "px-4 py-2 rounded-xl border text-sm font-medium",
+            qIndex === 0 ? "opacity-40 cursor-not-allowed border-slate-200" : "hover:bg-slate-50 border-slate-300"
+          )}
+        >
+          ← Back
+        </button>
+      </div>
+    </motion.section>
+  );
+}}
+
+function ResultCard({{ top, reset }}) {{
+  const primaryKey = top[0];
+  const house = HOUSES[primaryKey];
+  return (
+    <div className="rounded-2xl shadow-sm border overflow-hidden" style={{ borderColor: house.colors[0] }}>
+      <div className="p-6 text-white" style={{ background: `linear-gradient(135deg, ${{house.colors[0]}}, ${{house.colors[1]}})` }}>
+        <div className="flex items-center gap-4">
+          <div className="text-5xl">{{house.emoji}}</div>
+          <div>
+            <h3 className="text-2xl font-bold">{{house.name}} <span className="text-white/80">({{house.pron}})</span></h3>
+            <p className="mt-1">{{house.motto}}</p>
+          </div>
+        </div>
+      </div>
+      <div className="p-6">
+        <p className="mb-4">{{house.welcome}}</p>
+        <ul className="list-disc pl-5 text-slate-700 space-y-1">
+          <li><strong>Inspiration:</strong> {{house.inspiration}}</li>
+          <li><strong>Values:</strong> {{house.values.join(" · ")}}</li>
+          <li><strong>Mascot:</strong> {{house.mascot}}</li>
+          <li><strong>Colors:</strong> {{house.colors.join(" & ")}}</li>
+        </ul>
+        <div className="mt-6">
+          <button onClick={reset} className="px-4 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 font-medium">Retake quiz</button>
+        </div>
+      </div>
+    </div>
+  );
+}}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<HouseQuiz />);
+</script>
+</body>
+</html>
